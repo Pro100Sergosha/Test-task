@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Прогноз погоды</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 2rem;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 0 10px #ccc;
+      }
+      .weather-result {
+        margin-top: 2rem;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 0.5rem;
+        font-size: 1rem;
+      }
+      button {
+        margin-top: 1rem;
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #2980b9;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Прогноз погоды</h1>
+      <form method="GET">
+        <label for="city">Введите название города:</label>
+        <input
+          type="text"
+          id="city"
+          name="city"
+          class="awesomplete"
+          value="{{ city|default:'' }}"
+          autocomplete="off"
+          required />
+        <br />
+        <button type="submit">Показать погоду</button>
+      </form>
+
+      {% if weather %}
+      <div class="weather-result">
+        <h2>Погода в {{ city }}</h2>
+        <p><strong>Температура:</strong> {{ weather.temperature }}°C</p>
+        <p><strong>Ветер:</strong> {{ weather.wind_speed }} м/с</p>
+      </div>
+      {% elif city %}
+      <div class="weather-result">
+        <p>Не удалось получить данные о погоде для города "{{ city }}".</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <script>
+      const input = document.getElementById("city");
+      const awesomplete = new Awesomplete(input, {
+        minChars: 2,
+        maxItems: 10,
+        autoFirst: true,
+      });
+
+      input.addEventListener("input", () => {
+        const query = input.value;
+        if (query.length < 2) return;
+
+        fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+            query
+          )}&language=ru&count=20`
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.results) {
+              const cityCountryList = data.results.map((city) => {
+                const country = city.country ? city.country : "";
+                return `${city.name}${country ? ", " + country : ""}`;
+              });
+
+              const uniqueList = [...new Set(cityCountryList)];
+
+              awesomplete.list = uniqueList;
+            }
+          })
+          .catch((error) => {
+            console.error("Ошибка при загрузке городов:", error);
+          });
+      });
+    </script>
+  </body>
+</html>
